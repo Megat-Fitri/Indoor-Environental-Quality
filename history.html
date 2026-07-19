@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IEQ Hub - History</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+    <style>
+        :root { --sidebar-width: 260px; --bg-workspace: #f8fafc; --primary-dark: #0f172a; --primary-blue: #2563eb; --border-color: #e2e8f0; --success: #10b981; --warning: #f59e0b; --danger: #ef4444; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; }
+        body { background-color: var(--bg-workspace); display: flex; height: 100vh; overflow: hidden; }
+        
+        aside { width: var(--sidebar-width); background-color: var(--primary-dark); color: #ffffff; display: flex; flex-direction: column; padding: 24px 16px; z-index: 10; }
+        .brand-title { font-size: 1.15rem; font-weight: 700; margin-bottom: 24px; display: flex; align-items: center; gap: 10px; }
+        .nav-links { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+        .nav-links a { display: flex; align-items: center; gap: 12px; padding: 12px; color: #94a3b8; text-decoration: none; border-radius: 8px; font-weight: 500; }
+        .nav-links li.active a, .nav-links a:hover { background-color: rgba(255,255,255,0.06); color: #ffffff; }
+
+        main { flex: 1; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+        .top-bar { height: 70px; background-color: #ffffff; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; padding: 0 32px; flex-shrink: 0; }
+        .workspace-content { padding: 32px; flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 24px; }
+
+        .table-card { background: white; border: 1px solid var(--border-color); border-radius: 12px; overflow: hidden; }
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        th, td { padding: 14px 16px; border-bottom: 1px solid var(--border-color); font-size: 0.9rem; }
+        th { background-color: #f8fafc; color: #475569; font-weight: 600; }
+        tr:hover { background-color: #f8fafc; }
+
+        .status-badge { padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; display: inline-block; }
+        .bg-normal { background-color: #d1fae5; color: #065f46; }
+        .bg-warning { background-color: #fef3c7; color: #92400e; }
+        .bg-critical { background-color: #fee2e2; color: #991b1b; }
+    </style>
+</head>
+<body>
+
+    <aside>
+        <div class="brand-title"><span class="material-icons-round" style="color:var(--primary-blue);">analytics</span> IEQ Hub Pro</div>
+        <ul class="nav-links">
+            <li><a href="index.html"><span class="material-icons-round">dashboard</span>Overview</a></li>
+            <li><a href="insight.html"><span class="material-icons-round">insights</span>Analytics</a></li>
+            <li class="active"><a href="history.html"><span class="material-icons-round">history</span>History Data</a></li>
+            <li><a href="settings.html"><span class="material-icons-round">settings</span>Thresholds</a></li>
+        </ul>
+        <!-- <div style="margin-top: auto; background: rgba(255,255,255,0.05); padding: 14px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.1);">
+            <p style="font-size: 0.75rem; color: #94a3b8; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px;">Actuator Switch</p>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
+                <span style="font-size: 0.85rem; font-weight: 500;">Buzzer Alarm</span>
+                <button id="quick-toggle-buzzer" style="background: var(--primary-blue); color: white; border: none; padding: 6px 12px; font-size: 0.75rem; font-weight: bold; border-radius: 4px; cursor: pointer;">Toggle Mode</button>
+            </div>
+            <p style="font-size: 0.7 ounce; color: #64748b; margin-top: 6px;">Active Mode: <span id="sidebar-alert-mode-label" style="font-weight: bold; color: #60a5fa;">AUTO</span></p>
+        </div> -->
+    </aside>
+
+    <main>
+        <div class="top-bar"><h2 style="font-size: 1.3rem; font-weight: 700; color: #0f172a;">Archival Database Logs</h2></div>
+
+        <div class="workspace-content">
+            <div class="table-card">
+                <table id="extended-history-table">
+                    <thead>
+                        <tr>
+                            <th>Log ID</th>
+                            <th>Device ID</th>
+                            <th>Timestamp</th>
+                            <th>Temperature</th>
+                            <th>Humidity</th>
+                            <th>Sound Level</th>
+                            <th>Gas Metric (MQ-2)</th>
+                            <th>Evaluated Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td colspan="8" style="text-align:center; color:#94a3b8;">Querying SQLite archive logs...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+<script>
+    const DEVICE_ID = "ESP32_ROOM_1";
+
+    async function fetchArchivalTable() {
+        try {
+            const response = await fetch(`/api/logs?device_id=${DEVICE_ID}`);
+            if(!response.ok) return;
+            const records = await response.json();
+            const tbody = document.querySelector('#extended-history-table tbody');
+            
+            if(!records || records.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:#94a3b8;">No records saved yet.</td></tr>`;
+                return;
+            }
+            
+            let htmlStr = "";
+            records.forEach(log => {
+                const ts = new Date(log.created_at).toLocaleString();
+                let badge = log.status === "Critical" ? "bg-critical" : (log.status === "Warning" ? "bg-warning" : "bg-normal");
+                
+                htmlStr += `<tr>
+                    <td>#${log.id}</td>
+                    <td style="font-family:monospace; font-weight:bold;">${log.device_id}</td>
+                    <td>${ts}</td>
+                    <td>${log.temperature ? log.temperature.toFixed(1) : 0}°C</td>
+                    <td>${log.humidity ? log.humidity.toFixed(1) : 0}%</td>
+                    <td>${log.sound_level}</td>
+                    <td>${log.air_quality}</td>
+                    <td><span class="status-badge ${badge}">${log.status}</span></td>
+                </tr>`;
+            });
+            tbody.innerHTML = htmlStr;
+        } catch(e) { console.error("Archival logging query failure:", e); }
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+        fetchArchivalTable();
+        setInterval(fetchArchivalTable, 4000);
+    });
+</script>
+</body>
+</html>

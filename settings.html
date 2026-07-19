@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IEQ Hub - Threshold Settings</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+    <style>
+        :root { --sidebar-width: 260px; --bg-workspace: #f8fafc; --primary-dark: #0f172a; --primary-blue: #2563eb; --border-color: #e2e8f0; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; }
+        body { background-color: var(--bg-workspace); display: flex; height: 100vh; overflow: hidden; }
+        
+        aside { width: var(--sidebar-width); background-color: var(--primary-dark); color: #ffffff; display: flex; flex-direction: column; padding: 24px 16px; z-index: 10; }
+        .brand-title { font-size: 1.15rem; font-weight: 700; margin-bottom: 24px; display: flex; align-items: center; gap: 10px; }
+        .nav-links { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+        .nav-links a { display: flex; align-items: center; gap: 12px; padding: 12px; color: #94a3b8; text-decoration: none; border-radius: 8px; font-weight: 500; }
+        .nav-links li.active a { background-color: rgba(255,255,255,0.06); color: #ffffff; }
+
+        main { flex: 1; display: flex; flex-direction: column; height: 100vh; overflow-y: auto; }
+        .top-bar { height: 70px; background-color: #ffffff; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; padding: 0 32px; flex-shrink: 0; }
+        .workspace-content { padding: 32px; max-width: 800px; width: 100%; margin: 0 auto; }
+
+        .settings-card { background: white; border: 1px solid var(--border-color); border-radius: 12px; padding: 28px; box-shadow: 0 1px 3px rgba(0,0,0,0.02); }
+        .settings-header { font-size: 1.1rem; font-weight: 700; color: #0f172a; margin-bottom: 20px; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; }
+        
+        /* Fixed design alignment grid container structural fix */
+        .form-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin-bottom: 24px; }
+        @media(max-width: 600px) { .form-grid { grid-template-columns: 1fr; } }
+
+        .field-group { display: flex; flex-direction: column; gap: 6px; }
+        .field-group label { font-size: 0.85rem; font-weight: 600; color: #475569; text-transform: uppercase; letter-spacing: 0.3px; }
+        .field-group input, .field-group select { padding: 10px 14px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 0.95rem; color: #1e293b; background: #f8fafc; outline: none; transition: border 0.2s; width: 100%; }
+        .field-group input:focus, .field-group select:focus { border-color: var(--primary-blue); background: #ffffff; }
+
+        .btn-submit { background: var(--primary-blue); color: white; border: none; padding: 12px 24px; border-radius: 8px; font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: background 0.2s; display: inline-flex; align-items: center; gap: 8px; }
+        .btn-submit:hover { background: #1d4ed8; }
+        .notify-banner { padding: 12px 16px; border-radius: 8px; margin-bottom: 20px; font-size: 0.9rem; font-weight: 600; display: none; }
+    </style>
+</head>
+<body>
+
+    <aside>
+        <div class="brand-title"><span class="material-icons-round" style="color:var(--primary-blue);">analytics</span> IEQ Hub Pro</div>
+        <ul class="nav-links">
+            <li><a href="index.html"><span class="material-icons-round">dashboard</span>Overview</a></li>
+            <li><a href="insight.html"><span class="material-icons-round">insights</span>Analytics</a></li>
+            <li><a href="history.html"><span class="material-icons-round">history</span>History Data</a></li>
+            <li class="active"><a href="settings.html"><span class="material-icons-round">settings</span>Thresholds</a></li>
+        </ul>
+    </aside>
+
+    <main>
+        <div class="top-bar"><h2 style="font-size: 1.3rem; font-weight: 700; color: #0f172a;">Threshold Configurations</h2></div>
+
+        <div class="workspace-content">
+            <div id="statusBanner" class="notify-banner"></div>
+
+            <div class="settings-card">
+                <div class="settings-header"><span class="material-icons-round" style="color:var(--primary-blue);">tune</span> Core Safe Operating Limits</div>
+                <form id="settingsForm">
+                    <div class="form-grid">
+                        <div class="field-group">
+                            <label>Max Temperature Threshold (°C)</label>
+                            <input type="number" step="0.1" id="temp_threshold" required>
+                        </div>
+                        <div class="field-group">
+                            <label>Max Noise Threshold (Sound)</label>
+                            <input type="number" id="noise_threshold" required>
+                        </div>
+                        <div class="field-group">
+                            <label>Min Humidity Margin (%)</label>
+                            <input type="number" step="0.1" id="humidity_min" required>
+                        </div>
+                        <div class="field-group">
+                            <label>Max Humidity Margin (%)</label>
+                            <input type="number" step="0.1" id="humidity_max" required>
+                        </div>
+                        <div class="field-group">
+                            <label>Gas Warning Boundary (ppm)</label>
+                            <input type="number" id="gas_warning" required>
+                        </div>
+                        <div class="field-group">
+                            <label>Gas Critical Evac Boundary (ppm)</label>
+                            <input type="number" id="gas_critical" required>
+                        </div>
+                        <div class="field-group" style="grid-column: span 2;">
+                            <label>Buzzer Alarm Mode</label>
+                            <select id="alert_mode">
+                                <option value="AUTO">AUTOMATIC ALARM ACTIONS ON TARGET BREACH</option>
+                                <option value="MUTE">MUTE SYSTEM AUDIBLE ACTUATORS</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn-submit"><span class="material-icons-round">save</span> Save Changes</button>
+                </form>
+            </div>
+        </div>
+    </main>
+
+<script>
+    const DEVICE_ID = "ESP32_ROOM_1";
+
+    async function loadFormValues() {
+        try {
+            const response = await fetch(`/api/settings?device_id=${DEVICE_ID}`);
+            if (response.ok) {
+                const data = await response.json();
+                document.getElementById('temp_threshold').value = data.temp_threshold;
+                document.getElementById('humidity_min').value = data.humidity_min;
+                document.getElementById('humidity_max').value = data.humidity_max;
+                document.getElementById('noise_threshold').value = data.noise_threshold;
+                document.getElementById('gas_warning').value = data.gas_warning;
+                document.getElementById('gas_critical').value = data.gas_critical;
+                document.getElementById('alert_mode').value = data.alert_mode || "AUTO";
+            }
+        } catch (err) { console.error("Error configuration parsing:", err); }
+    }
+
+    document.getElementById('settingsForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const payload = {
+            device_id: DEVICE_ID,
+            temp_threshold: parseFloat(document.getElementById('temp_threshold').value),
+            humidity_min: parseFloat(document.getElementById('humidity_min').value),
+            humidity_max: parseFloat(document.getElementById('humidity_max').value),
+            noise_threshold: parseInt(document.getElementById('noise_threshold').value),
+            gas_warning: parseInt(document.getElementById('gas_warning').value),
+            gas_critical: parseInt(document.getElementById('gas_critical').value),
+            alert_mode: document.getElementById('alert_mode').value
+        };
+
+        try {
+            const res = await fetch('/api/settings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const banner = document.getElementById('statusBanner');
+            if (res.ok) {
+                banner.innerText = "Settings updated successfully!";
+                banner.style.display = "block"; banner.style.background = "#d1fae5"; banner.style.color = "#065f46";
+            } else {
+                banner.innerText = "Error encountered updating thresholds.";
+                banner.style.display = "block"; banner.style.background = "#fee2e2"; banner.style.color = "#991b1b";
+            }
+            setTimeout(() => banner.style.display = "none", 4000);
+        } catch (err) { console.error(err); }
+    });
+
+    window.addEventListener('DOMContentLoaded', loadFormValues);
+</script>
+</body>
+</html>

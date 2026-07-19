@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IEQ Hub - Insights</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+    <style>
+        :root { --sidebar-width: 260px; --bg-workspace: #f8fafc; --primary-dark: #0f172a; --primary-blue: #2563eb; --border-color: #e2e8f0; --success: #10b981; --warning: #f59e0b; --discomfort: #8b5cf6; --danger: #ef4444; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; }
+        body { background-color: var(--bg-workspace); display: flex; height: 100vh; overflow: hidden; }
+        
+        aside { width: var(--sidebar-width); background-color: var(--primary-dark); color: #ffffff; display: flex; flex-direction: column; padding: 24px 16px; z-index: 10; }
+        .brand-title { font-size: 1.15rem; font-weight: 700; margin-bottom: 24px; display: flex; align-items: center; gap: 10px; }
+        .nav-links { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+        .nav-links a { display: flex; align-items: center; gap: 12px; padding: 12px; color: #94a3b8; text-decoration: none; border-radius: 8px; font-weight: 500; }
+        .nav-links li.active a { background-color: rgba(255,255,255,0.06); color: #ffffff; }
+
+        main { flex: 1; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+        .top-bar { height: 70px; background-color: #ffffff; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; padding: 0 32px; flex-shrink: 0; }
+        
+        /* Rigid viewport enforcement layout blocks horizontal overflows */
+        .workspace-content { padding: 24px; display: flex; flex-direction: column; gap: 16px; height: calc(100vh - 70px); overflow-y: auto; overflow-x: hidden; }
+
+        .alert-box { padding: 16px 20px; border-radius: 12px; display: flex; align-items: center; justify-content: space-between; gap: 16px; border: 1px solid transparent; font-size: 0.95rem; font-weight: 600; cursor: pointer; flex-shrink: 0; }
+        .alert-box.success { background-color: #d1fae5; color: #065f46; }
+        .alert-box.discomfort { background-color: #f3e8ff; color: #6b21a8; }
+        .alert-box.warning { background-color: #fef3c7; color: #92400e; }
+        .alert-box.danger { background-color: #fee2e2; color: #991b1b; }
+        .mitigation-btn { background: rgba(0,0,0,0.05); border: 1px solid currentColor; padding: 6px 12px; font-size: 0.8rem; font-weight: 700; border-radius: 6px; }
+
+        /* Modified Grid: Display charts sequentially by ROW rather than columns side-by-side */
+        .analysis-grid { display: grid; grid-template-columns: 1fr; gap: 20px; width: 100%; min-height: 0; padding-bottom: 20px; }
+        
+        .chart-box { background: white; border: 1px solid var(--border-color); padding: 20px; border-radius: 12px; display: flex; flex-direction: column; min-height: 260px; height: 260px; }
+        .chart-title { font-size: 0.95rem; font-weight: 700; color: #1e293b; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+        .canvas-container { flex: 1; position: relative; min-height: 0; width: 100%; }
+
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.6); display: flex; align-items: center; justify-content: center; z-index: 9999; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; }
+        .modal-overlay.active { opacity: 1; pointer-events: auto; }
+        .modal-card { background: white; border-radius: 16px; width: 90%; max-width: 520px; padding: 28px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.15); }
+        .modal-head { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+        .modal-head h3 { font-size: 1.25rem; font-weight: 700; }
+        .modal-body { font-size: 0.95rem; color: #475569; line-height: 1.6; margin-bottom: 24px; }
+        .modal-close-btn { background: var(--primary-dark); color: white; border: none; padding: 10px 20px; font-weight: 600; border-radius: 8px; cursor: pointer; float: right; }
+        
+        .text-critical { color: var(--danger); }
+        .text-warning { color: var(--warning); }
+        .text-discomfort { color: var(--discomfort); }
+        .text-normal { color: var(--success); }
+    </style>
+</head>
+<body>
+
+    <aside>
+        <div class="brand-title"><span class="material-icons-round" style="color:var(--primary-blue);">analytics</span> IEQ Hub Pro</div>
+        <ul class="nav-links">
+            <li><a href="index.html"><span class="material-icons-round">dashboard</span>Overview</a></li>
+            <li class="active"><a href="insight.html"><span class="material-icons-round">insights</span>Analytics</a></li>
+            <li><a href="history.html"><span class="material-icons-round">history</span>History Data</a></li>
+            <li><a href="settings.html"><span class="material-icons-round">settings</span>Thresholds</a></li>
+        </ul>
+    </aside>
+
+    <main>
+        <div class="top-bar"><h2 style="font-size: 1.3rem; font-weight: 700; color: #0f172a;">Data Insights & Analytics</h2></div>
+
+        <div class="workspace-content">
+            <div id="recommendation-box" class="alert-box success">
+                <div style="display:flex; align-items:center; gap:12px;">
+                    <span id="recommend-icon" class="material-icons-round">analytics</span>
+                    <div id="recommend-text">Loading room intelligence data telemetry...</div>
+                </div>
+                <button class="mitigation-btn">View Actions</button>
+            </div>
+
+            <!-- Custom structural row grid layout wrapper[cite: 1] -->
+            <div class="analysis-grid">
+                <div class="chart-box">
+                    <div class="chart-title"><span class="material-icons-round" style="color:#ef4444;">thermostat</span> Climate Timeline</div>
+                    <div class="canvas-container"><canvas id="tempChart"></canvas></div>
+                </div>
+                <div class="chart-box">
+                    <div class="chart-title"><span class="material-icons-round" style="color:#10b981;">air</span> Air Pollution (MQ-2)</div>
+                    <div class="canvas-container"><canvas id="gasChart"></canvas></div>
+                </div>
+                <div class="chart-box">
+                    <div class="chart-title"><span class="material-icons-round" style="color:#f59e0b;">volume_up</span> Sound Threshold Map</div>
+                    <div class="canvas-container"><canvas id="noiseChart"></canvas></div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div id="mitigationModal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-head">
+                <span id="modalIcon" class="material-icons-round">info</span>
+                <h3 id="modalTitle">Mitigation Strategy</h3>
+            </div>
+            <div id="modalDesc" class="modal-body"></div>
+            <button class="modal-close-btn" onclick="closeModal()">Dismiss</button>
+        </div>
+    </div>
+
+<script>
+    const DEVICE_ID = "ESP32_ROOM_1";
+    let chartInstances = {};
+    let currentMitigationPayload = {};
+
+    function showModal(title, text, icon, type) {
+        const modal = document.getElementById('mitigationModal');
+        const iconElem = document.getElementById('modalIcon');
+        document.getElementById('modalTitle').innerText = title;
+        document.getElementById('modalDesc').innerText = text;
+        iconElem.innerText = icon;
+        iconElem.className = "material-icons-round " + (type==='critical'?'text-critical':type==='warning'?'text-warning':type==='discomfort'?'text-discomfort':'text-normal');
+        modal.classList.add('active');
+    }
+
+    function closeModal() { document.getElementById('mitigationModal').classList.remove('active'); }
+
+    document.getElementById('recommendation-box').addEventListener('click', () => {
+        if(currentMitigationPayload.title) {
+            showModal(currentMitigationPayload.title, currentMitigationPayload.text, currentMitigationPayload.icon, currentMitigationPayload.type);
+        }
+    });
+
+    async function fetchAndRenderCharts() {
+        try {
+            const [logsRes, settingsRes, latestRes] = await Promise.all([
+                fetch(`/api/logs?device_id=${DEVICE_ID}`),
+                fetch(`/api/settings?device_id=${DEVICE_ID}`),
+                fetch(`/api/latest?device_id=${DEVICE_ID}`)
+            ]);
+
+            if (!logsRes.ok || !latestRes.ok) return;
+            const rawLogs = await logsRes.json();
+            const latest = await latestRes.json();
+            const settings = settingsRes.ok ? await settingsRes.json() : { temp_threshold: 30, humidity_min: 40, humidity_max: 70, noise_threshold: 500, gas_warning: 300, gas_critical: 500 };
+            
+            if (rawLogs.length === 0) return;
+
+            const temp = latest.temperature || 0;
+            const hum = latest.humidity || 0;
+            const noise = latest.sound_level || 0;
+            const gas = latest.air_quality || 0;
+
+            const tErr = temp > settings.temp_threshold;
+            const hErr = (hum < settings.humidity_min || hum > settings.humidity_max);
+            const nErr = noise > settings.noise_threshold;
+
+            const recBox = document.getElementById('recommendation-box');
+            const recText = document.getElementById('recommend-text');
+            const recIcon = document.getElementById('recommend-icon');
+
+            if (gas > settings.gas_critical) {
+                currentMitigationPayload = { title: "CRITICAL GAS ESCAPE DETECTED", text: "Immediate Action Required:\n\n1. Safely evacuate all room building occupants.\n2. Do not use electrical switches.\n3. Open all emergency ventilation systems.", icon: "gavel", type: "critical" };
+                recBox.className = "alert-box danger"; recIcon.innerText = "gavel"; recText.innerText = "CRITICAL: Gas Escape Evacuation Active!";
+            } else if (gas > settings.gas_warning) {
+                currentMitigationPayload = { title: "GAS WARNING METRICS HIGH", text: "Precautionary Action Required:\n\n1. Engage room exhaust fan infrastructure immediately.\n2. Cross-ventilate by opening windows safely.\n3. Locate source node leaks.", icon: "warning", type: "warning" };
+                recBox.className = "alert-box warning"; recIcon.innerText = "warning"; recText.innerText = "WARNING: Gas Levels Exceed Healthy Thresholds.";
+            } else if (tErr || hErr || nErr) {
+                let adviceLines = ["Discomfort Actions Advised:"];
+                
+                if (tErr && hErr) {
+                    adviceLines.push("Space is both Overheated and Humidity-Breached: It's likely stuffy and hot. We highly recommend leaving the room temporarily, opening cross-ventilation lines, or maximizing AC/Extractor flow rates.");
+                } else if (tErr) {
+                    adviceLines.push("Elevated Temperature: The room is too hot. Turn on localized desktop fans or adjust thermostat set points downward.");
+                } else if (hErr) {
+                    adviceLines.push("Moisture Imbalance: Relative humidity limits breached. Run mechanical HVAC fans or standalone extraction systems.");
+                }
+
+                if (nErr) {
+                    adviceLines.push("Acoustic Discomfort: High ambient sound registers. Please check if exterior building windows or mechanical equipment enclosures were left open.");
+                }
+
+                currentMitigationPayload = { 
+                    title: "AMBIENT DISCOMFORT MITIGATION ENGINE", 
+                    text: adviceLines.join("\n\n"), 
+                    icon: "sentiment_dissatisfied", 
+                    type: "discomfort" 
+                };
+                recBox.className = "alert-box discomfort"; recIcon.innerText = "sentiment_dissatisfied"; recText.innerText = "DISCOMFORT: Ambient targets breached. Click for customized mitigation tips.";
+            } else {
+                currentMitigationPayload = { title: "ENVIRONMENT PARAMETERS NOMINAL", text: "All systems running normal. Air metrics are within default standards.", icon: "check_circle", type: "normal" };
+                recBox.className = "alert-box success"; recIcon.innerText = "check_circle"; recText.innerText = "COMFORTABLE: Internal environment indicators secure.";
+            }
+
+            const chronologicalData = rawLogs.slice(0, 15).reverse();
+            const labels = chronologicalData.map(l => new Date(l.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}));
+
+            function drawChart(key, canvasId, label, dataset, color) {
+                let ctx = document.getElementById(canvasId).getContext('2d');
+                if (chartInstances[key]) {
+                    chartInstances[key].data.labels = labels; 
+                    chartInstances[key].data.datasets[0].data = dataset; 
+                    chartInstances[key].update();
+                } else {
+                    chartInstances[key] = new Chart(ctx, {
+                        type: 'line',
+                        data: { labels: labels, datasets: [{ label: label, data: dataset, borderColor: color, backgroundColor: `${color}0A`, fill: true, tension: 0.2, borderWidth: 2 }] },
+                        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { font: { size: 11, weight: '600' } } } }, scales: { y: { ticks: { font: { size: 10 } } }, x: { ticks: { font: { size: 10 } } } } }
+                    });
+                }
+            }
+
+            drawChart('temp', 'tempChart', 'Temp (°C)', chronologicalData.map(l => l.temperature), '#ef4444');
+            drawChart('gas', 'gasChart', 'Gas (MQ-2)', chronologicalData.map(l => l.air_quality), '#10b981');
+            drawChart('noise', 'noiseChart', 'Sound Level', chronologicalData.map(l => l.sound_level), '#f59e0b');
+        } catch (err) { console.error(err); }
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+        fetchAndRenderCharts();
+        setInterval(fetchAndRenderCharts, 4000);
+    });
+</script>
+</body>
+</html>

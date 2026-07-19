@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IEQ & Acoustic Analytics Hub</title>
+    <title>IEQ Hub - Overview</title>
+    <!-- Included Chart.js dependency for the Pie Chart -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
     <style>
@@ -16,620 +17,339 @@
             --text-main: #334155;
             --success: #10b981;
             --warning: #f59e0b;
+            --discomfort: #8b5cf6;
             --danger: #ef4444;
-            --room-glow: rgba(16, 185, 129, 0.2);
         }
-
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; }
         body { background-color: var(--bg-workspace); color: var(--text-main); display: flex; height: 100vh; overflow: hidden; }
 
-        /* SIDEBAR NAVIGATION */
         aside { width: var(--sidebar-width); background-color: var(--primary-dark); color: #ffffff; display: flex; flex-direction: column; padding: 24px 16px; z-index: 10; }
-        .brand-title { font-size: 1.15rem; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 24px; display: flex; align-items: center; gap: 10px; color: #f8fafc; }
-        .brand-title span { color: var(--primary-blue); }
-        .nav-menu { list-style: none; display: flex; flex-direction: column; gap: 8px; }
-        .nav-item { display: flex; align-items: center; gap: 12px; padding: 12px 16px; color: #94a3b8; text-decoration: none; border-radius: 8px; font-weight: 500; cursor: pointer; transition: all 0.2s ease; }
-        .nav-item:hover, .nav-item.active { background-color: #1e293b; color: #ffffff; }
-        .nav-item.active { border-left: 4px solid var(--primary-blue); }
+        .brand-title { font-size: 1.15rem; font-weight: 700; margin-bottom: 24px; display: flex; align-items: center; gap: 10px; color: #f8fafc; }
+        .nav-links { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+        .nav-links a { display: flex; align-items: center; gap: 12px; padding: 12px; color: #94a3b8; text-decoration: none; border-radius: 8px; font-weight: 500; transition: all 0.2s; }
+        .nav-links a:hover, .nav-links li.active a { background-color: rgba(255,255,255,0.06); color: #ffffff; }
 
-        /* MULTI-DEVICE SELECTION CONTAINER */
-        .device-select-container { margin-bottom: 20px; border-top: 1px solid #334155; padding-top: 16px; }
-        .device-label { color: #64748b; font-size: 0.75rem; font-weight: bold; text-transform: uppercase; display: block; margin-bottom: 6px; padding-left: 4px; }
-        .device-dropdown { width: 100%; padding: 10px; border-radius: 6px; background-color: #1e293b; color: white; border: 1px solid #475569; font-size: 0.85rem; cursor: pointer; outline: none; }
+        main { flex: 1; display: flex; flex-direction: column; height: 100vh; overflow-y: auto; }
+        .top-bar { height: 70px; background-color: #ffffff; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; padding: 0 32px; flex-shrink: 0; }
+        .workspace-content { padding: 32px; display: flex; flex-direction: column; gap: 24px; }
 
-        /* LIVE TELEMETRY TICKER BANNER */
-        .ticker-wrapper { background: #1e293b; color: #f8fafc; padding: 10px 40px; font-size: 0.85rem; font-family: monospace; display: flex; align-items: center; gap: 16px; border-bottom: 1px solid #334155; overflow: hidden; }
-        .ticker-label { background: var(--primary-blue); color: white; padding: 2px 8px; border-radius: 4px; font-weight: bold; text-transform: uppercase; white-space: nowrap; }
-        .device-badge { background: #475569; color: #f8fafc; padding: 2px 8px; border-radius: 4px; font-weight: bold; font-size: 0.8rem; white-space: nowrap; }
-        .ticker-window { flex: 1; overflow: hidden; white-space: nowrap; position: relative; }
-        .ticker-text { display: inline-block; padding-left: 100%; animation: tickerRun 25s linear infinite; }
-        .ticker-text:hover { animation-play-state: paused; }
+        .dashboard-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 24px; margin-bottom: 8px; }
+        @media(max-width: 1024px) { .dashboard-grid { grid-template-columns: 1fr; } }
 
-        /* MAIN CONTENT WORKSPACE */
-        main { flex: 1; display: flex; flex-direction: column; overflow-y: auto; }
-        .workspace-view { padding: 30px 40px; display: none; max-width: 1400px; width: 100%; margin: 0 auto; }
-        .workspace-view.active { display: block; animation: fadeIn 0.3s ease; }
-        .view-title { font-size: 1.5rem; font-weight: 700; color: var(--primary-dark); margin-bottom: 4px; }
-        .view-subtitle { font-size: 0.9rem; color: #64748b; margin-bottom: 20px; }
+        .metrics-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+        .metric-card { background: #ffffff; border: 1px solid var(--border-color); border-radius: 12px; padding: 20px; display: flex; align-items: center; gap: 16px; }
+        .icon-wrapper { width: 48px; height: 48px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: white; }
+        .m-title { font-size: 0.85rem; color: #64748b; font-weight: 600; text-transform: uppercase; }
+        .m-val { font-size: 1.75rem; font-weight: 700; color: #1e293b; margin-top: 4px; }
+
+        .card-frame { background: #ffffff; border: 1px solid var(--border-color); border-radius: 12px; padding: 24px; display: flex; flex-direction: column; }
+        .card-header { font-size: 1.05rem; font-weight: 700; color: #1e293b; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+
+        .room-state-box { border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 32px; text-align: center; transition: all 0.4s ease; border: 1px solid var(--border-color); height: 100%; cursor: pointer; }
+        .room-state-title { font-size: 0.9rem; color: #475569; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+        .room-state-banner { font-size: 2rem; font-weight: 900; margin-top: 8px; color: #0f172a; }
+
+        .canvas-container { position: relative; width: 100%; height: 220px; min-height: 0; }
+
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        th, td { padding: 14px 16px; border-bottom: 1px solid var(--border-color); font-size: 0.9rem; }
+        th { background-color: #f8fafc; color: #475569; font-weight: 600; }
+
+        .status-badge { padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; display: inline-block; }
+        .bg-normal { background-color: #d1fae5; color: #065f46; }
+        .bg-discomfort { background-color: #f3e8ff; color: #6b21a8; }
+        .bg-warning { background-color: #fef3c7; color: #92400e; }
+        .bg-critical { background-color: #fee2e2; color: #991b1b; }
+
+        .directive-section { display: flex; flex-direction: column; gap: 12px; margin-top: 8px; }
+        .directive-box { display: flex; gap: 16px; padding: 16px; border-radius: 10px; border-left: 5px solid transparent; background: #ffffff; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .directive-box:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+        .dir-critical { border-left-color: var(--danger); background: #fef2f2; }
+        .dir-warning { border-left-color: var(--warning); background: #fffbeb; }
+        .dir-discomfort { border-left-color: var(--discomfort); background: #faf5ff; }
+        .dir-normal { border-left-color: var(--success); background: #f0fdf4; }
+        .directive-title { font-weight: 700; font-size: 0.95rem; margin-bottom: 4px; }
+        .directive-desc { font-size: 0.85rem; color: #475569; line-height: 1.4; }
         
-        /* MASTER GRID CONFIGURATION */
-        .dashboard-top-layout { display: grid; grid-template-columns: 2fr 1fr; gap: 24px; margin-bottom: 24px; }
-        .left-sensor-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; }
-        .card { background: #ffffff; border: 1px solid var(--border-color); border-radius: 12px; padding: 22px; box-shadow: 0 1px 3px rgba(0,0,0,0.02); display: flex; flex-direction: column; justify-content: center; position: relative; transition: all 0.3s ease; }
-        .status-card-tall { display: flex; flex-direction: column; justify-content: space-between; height: 100%; }
-
-        /* 3D ROOM TWIN VISUALIZATION */
-        .room-visualizer-container { flex-grow: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; margin: 15px 0; min-height: 180px; }
-        .isometric-room-box { width: 150px; height: 100px; background: #cbd5e1; position: relative; transform: rotateX(60deg) rotateZ(-45deg); transform-style: preserve-3d; box-shadow: -15px 15px 25px rgba(0,0,0,0.1); transition: all 0.5s ease; border: 2px solid #94a3b8; }
-        .isometric-room-box::before, .isometric-room-box::after { content: ""; position: absolute; background: #e2e8f0; border: 1px solid #cbd5e1; transition: all 0.5s ease; }
-        .isometric-room-box::before { width: 150px; height: 40px; transform: rotateX(-90deg); transform-origin: top; top: 0; left: -2px; background: #e2e8f0; }
-        .isometric-room-box::after { width: 40px; height: 100px; transform: rotateY(90deg); transform-origin: left; top: -2px; left: 0; background: #f1f5f9; }
-        .room-glow-active { box-shadow: -15px 15px 40px var(--room-glow), inset 0 0 30px var(--room-glow); background: rgba(16, 185, 129, 0.4); }
-
-        /* DATA PRESENTATION STYLING */
-        .metric-header { display: flex; justify-content: space-between; align-items: center; color: #64748b; font-size: 0.85rem; font-weight: 600; text-transform: uppercase; }
-        .metric-value { font-size: 2.1rem; font-weight: 700; color: var(--primary-dark); margin: 12px 0 4px 0; transition: color 0.3s ease; }
-        .metric-footer { font-size: 0.85rem; color: #64748b; }
-        .split-layout { display: grid; grid-template-columns: 1fr 2fr; gap: 24px; }
-        
-        .status-block { border-radius: 8px; padding: 12px; color: white; text-align: center; font-weight: 700; text-transform: uppercase; font-size: 1.1rem; letter-spacing: 0.5px; margin-top: 10px; border: none; width: 100%; cursor: pointer; display: block; transition: transform 0.1s ease, filter 0.2s ease; }
-        .status-block:hover { filter: brightness(0.95); }
-        .status-block:active { transform: scale(0.98); }
-        
-        .text-normal { color: var(--success) !important; }
-        .text-warning { color: var(--warning) !important; }
         .text-critical { color: var(--danger) !important; }
-        .bg-normal { background-color: var(--success); }
-        .bg-warning { background-color: var(--warning); }
-        .bg-critical { background-color: var(--danger); }
-        
-        .table-container { background: #ffffff; border: 1px solid var(--border-color); border-radius: 12px; overflow: hidden; margin-top: 16px; }
-        table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem; }
-        th { background-color: #f8fafc; padding: 14px 20px; font-weight: 600; color: #475569; border-bottom: 1px solid var(--border-color); position: sticky; top: 0; }
-        td { padding: 14px 20px; border-bottom: 1px solid var(--border-color); }
-        .status-badge { padding: 4px 8px; border-radius: 12px; font-weight: 600; font-size: 0.7rem; text-transform: uppercase; color: #fff; display: inline-block; }
+        .text-warning { color: var(--warning) !important; }
+        .text-discomfort { color: var(--discomfort) !important; }
+        .text-normal { color: var(--success) !important; }
 
-        .insight-grid-layout { display: grid; grid-template-columns: 2fr 1fr; gap: 24px; margin-top: 24px; }
-        .action-hub-card { background: #ffffff; border: 1px solid var(--border-color); border-radius: 12px; padding: 24px; }
-        .directive-box { display: flex; align-items: flex-start; gap: 16px; padding: 16px; border-radius: 8px; margin-top: 12px; border-left: 5px solid #cbd5e1; background: #f8fafc; }
-        .directive-box.dir-normal { border-left-color: var(--success); background: #f0fdf4; }
-        .directive-box.dir-warning { border-left-color: var(--warning); background: #fffbeb; }
-        .directive-box.dir-critical { border-left-color: var(--danger); background: #fef2f2; }
-        .directive-title { font-weight: 700; font-size: 1rem; margin-bottom: 4px; color: var(--primary-dark); }
-        .directive-desc { font-size: 0.9rem; color: #475569; line-height: 1.4; }
-
-        /* MODAL WINDOW BACKGROUND OVERLAYS */
-        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.6); display: flex; align-items: center; justify-content: center; z-index: 1000; opacity: 0; pointer-events: none; transition: opacity 0.25s ease; }
-        .modal-overlay.modal-open { opacity: 1; pointer-events: auto; }
-        .modal-box { background: white; border-radius: 16px; width: 550px; max-width: 90%; padding: 28px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04); transform: scale(0.95); transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1); }
-        .modal-overlay.modal-open .modal-box { transform: scale(1); }
-        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        .modal-close-btn { background: #f1f5f9; border: none; border-radius: 50%; width: 32px; height: 32px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #64748b; transition: background 0.15s; }
-        .modal-close-btn:hover { background: #e2e8f0; color: var(--primary-dark); }
-
-        @keyframes tickerRun { 0% { transform: translate3d(0, 0, 0); } 100% { transform: translate3d(-100%, 0, 0); } }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.6); display: flex; align-items: center; justify-content: center; z-index: 9999; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; }
+        .modal-overlay.active { opacity: 1; pointer-events: auto; }
+        .modal-card { background: white; border-radius: 16px; width: 90%; max-width: 500px; padding: 28px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.15); transform: scale(0.9); transition: transform 0.3s ease; }
+        .modal-overlay.active .modal-card { transform: scale(1); }
+        .modal-head { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+        .modal-head span { font-size: 32px; }
+        .modal-head h3 { font-size: 1.25rem; font-weight: 700; color: #0f172a; }
+        .modal-body { font-size: 0.95rem; color: #475569; line-height: 1.6; margin-bottom: 24px; }
+        .modal-close-btn { background: var(--primary-dark); color: white; border: none; padding: 10px 20px; font-weight: 600; border-radius: 8px; cursor: pointer; float: right; }
     </style>
 </head>
 <body>
 
     <aside>
-        <div class="brand-title"><span class="material-icons-round">analytics</span><div>IEQ<span>Hub</span></div></div>
-        <ul class="nav-menu">
-            <li id="nav-overview" class="nav-item active" onclick="switchView('overview-view', this)"><span class="material-icons-round">dashboard</span>Overview</li>
-            <li id="nav-insights" class="nav-item" onclick="switchView('insights-view', this)"><span class="material-icons-round">insights</span>Insights</li>
-            <li id="nav-history" class="nav-item" onclick="switchView('history-view', this)"><span class="material-icons-round">history</span>Data History</li>
+        <div class="brand-title"><span class="material-icons-round" style="color:var(--primary-blue);">analytics</span> IEQ Hub Pro</div>
+        <ul class="nav-links">
+            <li class="active"><a href="index.html"><span class="material-icons-round">dashboard</span>Overview</a></li>
+            <li><a href="insight.html"><span class="material-icons-round">insights</span>Analytics</a></li>
+            <li><a href="history.html"><span class="material-icons-round">history</span>History Data</a></li>
+            <li><a href="settings.html"><span class="material-icons-round">settings</span>Thresholds</a></li>
         </ul>
-
-        <div class="device-select-container">
-            <label class="device-label" for="global-device-dropdown">Select Target Unit Node</label>
-            <select id="global-device-dropdown" class="device-dropdown" onchange="handleDeviceContextChange(this.value)">
-                <option value="ALL_DEVICES">All Synced Nodes (Latest)</option>
-                <option value="ESP32_DEV_01">Server Room Alpha (ESP32_01)</option>
-                <option value="ESP32_DEV_02">Lab B Workspace (ESP32_02)</option>
-            </select>
-        </div>
     </aside>
 
     <main>
-        <div class="ticker-wrapper">
-            <div class="ticker-label">Live Logs Feed</div>
-            <div id="device-id-badge" class="device-badge">Device: Global Stream</div>
-            <div class="ticker-window">
-                <div id="ticker-output" class="ticker-text">Establishing database synchronization links... Waiting for hardware payload streams...</div>
-            </div>
-            <button id="audio-toggle-btn" onclick="toggleAudioEngine()" style="background:transparent; border:1px solid #475569; color:white; padding:4px 12px; border-radius:6px; font-size:0.75rem; cursor:pointer; display:flex; align-items:center; gap:6px; font-weight: 500; transition: background 0.15s;">
-                <span id="audio-icon" class="material-icons-round" style="font-size:14px;">volume_off</span> <span id="audio-label">Audio: Off</span>
-            </button>
+        <div class="top-bar">
+            <h2 style="font-size: 1.3rem; font-weight: 700; color: #0f172a;">System Dashboard Overview</h2>
+            <div style="background: #e2e8f0; padding: 6px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 600;"><span class="material-icons-round" style="font-size:14px; color:#10b981; vertical-align: middle;">sensors</span> ESP32_ROOM_1</div>
         </div>
 
-        <div id="overview-view" class="workspace-view active">
-            <h2 class="view-title">Environmental Overview</h2>
-            <p class="view-subtitle">Real-time telemetric streams from active edge nodes.</p>
-
-            <div class="dashboard-top-layout">
-                <div class="left-sensor-grid">
-                    <div class="card">
-                        <div class="metric-header">Temperature <span class="material-icons-round" style="color:var(--danger)">thermostat</span></div>
-                        <div id="card-temp" class="metric-value">--°C</div>
-                        <div class="metric-footer">DHT11 Thermal Sensor</div>
+        <div class="workspace-content">
+            <div class="dashboard-grid">
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="icon-wrapper" style="background-color: #ef4444;"><span class="material-icons-round">thermostat</span></div>
+                        <div><p class="m-title">Temperature</p><p id="val-temp" class="m-val">--.-°C</p></div>
                     </div>
-                    <div class="card">
-                        <div class="metric-header">Humidity <span class="material-icons-round" style="color:var(--primary-blue)">water_drop</span></div>
-                        <div id="card-hum" class="metric-value">--%</div>
-                        <div class="metric-footer">Relative Moisture</div>
+                    <div class="metric-card">
+                        <div class="icon-wrapper" style="background-color: #3b82f6;"><span class="material-icons-round">water_drop</span></div>
+                        <div><p class="m-title">Humidity</p><p id="val-humid" class="m-val">--.-%</p></div>
                     </div>
-                    <div class="card">
-                        <div class="metric-header">Noise Level <span class="material-icons-round" style="color:var(--warning)">volume_up</span></div>
-                        <div id="card-noise" class="metric-value">--</div>
-                        <div class="metric-footer">Acoustic Amplitude</div>
+                    <div class="metric-card">
+                        <div class="icon-wrapper" style="background-color: #f59e0b;"><span class="material-icons-round">volume_up</span></div>
+                        <div><p class="m-title">Noise Level</p><p id="val-sound" class="m-val">----</p></div>
                     </div>
-                    <div class="card">
-                        <div class="metric-header">Air Quality <span class="material-icons-round" style="color:var(--success)">co2</span></div>
-                        <div id="card-gas" class="metric-value">--</div>
-                        <div class="metric-footer">MQ-2 Gas Rating</div>
+                    <div class="metric-card">
+                        <div class="icon-wrapper" style="background-color: #10b981;"><span class="material-icons-round">air</span></div>
+                        <div><p class="m-title">Gas Level (MQ-2)</p><p id="val-gas" class="m-val">----</p></div>
                     </div>
                 </div>
 
-                <div class="card status-card-tall" id="master-status-card" style="border-top: 4px solid var(--success);">
-                    <div class="metric-header">Spatial Twin Engine <span class="material-icons-round" style="color:var(--primary-blue)">layers</span></div>
-                    <div class="room-visualizer-container">
-                        <div id="room-twin-model" class="isometric-room-box room-glow-active"></div>
-                    </div>
-                    <div>
-                        <div class="metric-header" style="font-size:0.75rem; margin-bottom: 2px;">System Health Evaluation</div>
-                        <button id="global-status-card" onclick="openMitigationModal()" class="status-block bg-normal">Nominal State</button>
+                <div class="card-frame" style="padding: 0; background: transparent; border: none;">
+                    <div id="room-status-box" class="room-state-box">
+                        <span id="room-status-icon" class="material-icons-round" style="font-size: 48px; margin-bottom: 8px;">gite</span>
+                        <p class="room-state-title">Indoor Safety Status</p>
+                        <p id="system-status" class="room-state-banner">UNKNOWN</p>
                     </div>
                 </div>
             </div>
 
-            <div class="split-layout">
-                <div class="card" style="height: fit-content;">
-                    <h3 style="margin-bottom: 12px; font-size:1.1rem;">Threshold Guidelines</h3>
-                    <form id="settings-form">
-                        <div style="margin-bottom:12px;"><label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:4px;">Target Temp Cap (°C)</label><input type="number" id="form-temp" step="0.1" value="30.0" style="width:100%; padding:8px; border:1px solid var(--border-color); border-radius:6px;"></div>
-                        <div style="margin-bottom:12px;"><label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:4px;">Gas Safety Bound</label><input type="number" id="form-gas" value="300" style="width:100%; padding:8px; border:1px solid var(--border-color); border-radius:6px;"></div>
-                        <div style="margin-bottom:12px;"><label style="display:block; font-size:0.8rem; font-weight:600; margin-bottom:4px;">Transmission Cycle (s)</label><input type="number" id="form-interval" value="10" style="width:100%; padding:8px; border:1px solid var(--border-color); border-radius:6px;"></div>
-                        <button type="submit" style="width:100%; padding:10px; background:var(--primary-blue); color:white; border-radius:6px; border:none; font-weight:600; cursor:pointer;">Push Parameters</button>
-                    </form>
-                </div>
-                <div class="card">
-                    <h3 style="font-size:1.1rem;">Live Historical Stream (Last 5 Readings)</h3>
-                    <div class="table-container">
+            <div id="directiveContainer" class="directive-section"></div>
+
+            <div class="dashboard-grid">
+                <div class="card-frame">
+                    <div class="card-header"><span class="material-icons-round" style="color:var(--primary-blue);">reorder</span> Recent Live Telemetry Streams</div>
+                    <div style="overflow-x: auto;">
                         <table id="logs-table-overview">
-                            <thead><tr><th>Timestamp</th><th>Device ID</th><th>Temp</th><th>Humidity</th><th>Noise</th><th>Gas</th><th>Status</th></tr></thead>
-                            <tbody><tr><td colspan="7" style="text-align:center; color:#94a3b8;">Awaiting telemetry...</td></tr></tbody>
+                            <thead>
+                                <tr>
+                                    <th>Time</th>
+                                    <th>Device ID</th>
+                                    <th>Temp</th>
+                                    <th>Humidity</th>
+                                    <th>Noise</th>
+                                    <th>Gas</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
                         </table>
                     </div>
                 </div>
-            </div>
-        </div>
 
-        <div id="insights-view" class="workspace-view">
-            <div style="margin-bottom: 24px;">
-                <h2 class="view-title">Performance Insights & Analytics</h2>
-                <p class="view-subtitle">Statistical calculations and ambient tracking trends (Last 20 Readings).</p>
-            </div>
-
-            <div class="charts-wrapper" style="display: flex; flex-direction: column; gap: 24px;">
-                <div class="chart-container" style="background:#ffffff; border:1px solid var(--border-color); border-radius:12px; padding:24px;">
-                    <h3 style="margin-bottom:16px; font-size:1.1rem; color:#ef4444;">Thermal Tracking Timeline</h3>
-                    <canvas id="tempChart" style="width:100%; max-height:250px;"></canvas>
-                </div>
-                <div class="chart-container" style="background:#ffffff; border:1px solid var(--border-color); border-radius:12px; padding:24px;">
-                    <h3 style="margin-bottom:16px; font-size:1.1rem; color:#10b981;">Gas Concentration Tracking Timeline</h3>
-                    <canvas id="gasChart" style="width:100%; max-height:250px;"></canvas>
-                </div>
-                <div class="chart-container" style="background:#ffffff; border:1px solid var(--border-color); border-radius:12px; padding:24px;">
-                    <h3 style="margin-bottom:16px; font-size:1.1rem; color:#f59e0b;">Acoustic Noise Tracking Timeline</h3>
-                    <canvas id="noiseChart" style="width:100%; max-height:250px;"></canvas>
-                </div>
-            </div>
-
-            <div class="insight-grid-layout">
-                <div class="action-hub-card">
-                    <h3 style="font-size:1.1rem; margin-bottom:4px; display:flex; align-items:center; gap:8px;">
-                        <span class="material-icons-round" style="color:var(--primary-blue)">wysiwyg</span>Smart Mitigation Engine
-                    </h3>
-                    <p style="font-size:0.85rem; color:#64748b; margin-bottom:16px;">Real-time diagnostics and corrective response guidelines matching your data stream logs.</p>
-                    <div id="automation-directive-output"></div>
-                </div>
-                <div class="card" style="justify-content: flex-start;">
-                    <h4 style="font-size:0.9rem; text-transform:uppercase; color:#64748b; margin-bottom:12px;">Active Risk Indexes</h4>
-                    <div style="display:flex; flex-direction:column; gap:10px;">
-                        <div style="display:flex; justify-content:between; font-size:0.85rem;"><span>Comfort Violations:</span><strong id="idx-comfort" style="margin-left:auto;">0</strong></div>
-                        <div style="display:flex; justify-content:between; font-size:0.85rem;"><span>Combustible Hazard:</span><strong id="idx-gas" style="margin-left:auto;">None</strong></div>
+                <!-- Replaced text counters with the requested Pie Chart -->
+                <div class="card-frame">
+                    <div class="card-header"><span class="material-icons-round" style="color:var(--primary-blue);">pie_chart</span> Insight Metrics</div>
+                    <div class="canvas-container">
+                        <canvas id="logDistributionPieChart"></canvas>
                     </div>
-                </div>
-            </div>
-        </div>
-
-        <div id="history-view" class="workspace-view">
-            <h2 class="view-title">Extended Telemetry Archives</h2>
-            <p class="view-subtitle">Reviewing the last 100 sequential relational records committed to structural tables.</p>
-            
-            <div class="card" style="padding: 10px 0; border-radius: 12px; overflow: hidden;">
-                <div class="table-container" style="margin-top: 0; border: none; max-height: 650px; overflow-y: auto;">
-                    <table id="extended-history-table">
-                        <thead style="position: sticky; top: 0; z-index: 5; background: #f8fafc;">
-                            <tr>
-                                <th>Sequence ID</th>
-                                <th>Device Source Node</th>
-                                <th>Timestamp Header</th>
-                                <th>Temperature</th>
-                                <th>Humidity</th>
-                                <th>Acoustic Sound</th>
-                                <th>Gas Ingestion</th>
-                                <th>System Status</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr><td colspan="8" style="text-align:center; color:#94a3b8;">Loading deep historical logs from data layer...</td></tr>
-                        </tbody>
-                    </table>
                 </div>
             </div>
         </div>
     </main>
 
-    <div id="mitigation-modal" class="modal-overlay" onclick="closeMitigationModal(event)">
-        <div class="modal-box" onclick="event.stopPropagation()">
-            <div class="modal-header">
-                <h3 style="font-size: 1.25rem; font-weight: 700; display: flex; align-items: center; gap: 8px;">
-                    <span class="material-icons-round" style="color: var(--primary-blue)">healing</span>Mitigation Strategy Guide
-                </h3>
-                <button class="modal-close-btn" onclick="closeMitigationModal()"><span class="material-icons-round" style="font-size: 18px;">close</span></button>
+    <div id="mitigationModal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-head">
+                <span id="modalIcon" class="material-icons-round">info</span>
+                <h3 id="modalTitle">Directive Details</h3>
             </div>
-            <div id="modal-directive-content"></div>
+            <div id="modalDesc" class="modal-body"></div>
+            <button class="modal-close-btn" onclick="closeModal()">Dismiss</button>
         </div>
     </div>
 
-    <script>
-        const API_URL = "http://10.253.86.48:3000/api";
-        let chartInstances = { temp: null, gas: null, noise: null };
-        let currentSelectedDevice = "ALL_DEVICES";
-        let audioCtx = null;
-        let isAudioEnabled = false; 
+<script>
+    const DEVICE_ID = "ESP32_ROOM_1";
+    let currentMainDirective = {};
+    let pieChartInstance = null;
+
+    function showPopup(title, text, icon, type) {
+        const modal = document.getElementById('mitigationModal');
+        const iconElem = document.getElementById('modalIcon');
+        document.getElementById('modalTitle').innerText = title;
+        document.getElementById('modalDesc').innerText = text;
+        iconElem.innerText = icon;
+        iconElem.className = "material-icons-round " + (type === 'critical' ? 'text-critical' : type === 'warning' ? 'text-warning' : type === 'discomfort' ? 'text-discomfort' : 'text-normal');
+        modal.classList.add('active');
+    }
+
+    function closeModal() { document.getElementById('mitigationModal').classList.remove('active'); }
+
+    document.getElementById('room-status-box').addEventListener('click', () => {
+        if(currentMainDirective.title) showPopup(currentMainDirective.title, currentMainDirective.text, currentMainDirective.icon, currentMainDirective.type);
+    });
+
+    function updatePieChart(stats) {
+        const total = stats.total_logs || 0;
+        const warnings = stats.warning_count || 0;
+        const criticals = stats.critical_count || 0;
+        const discomforts = stats.discomfort_count || 0;
+        const normals = Math.max(0, total - (warnings + criticals + discomforts));
+
+        const ctx = document.getElementById('logDistributionPieChart').getContext('2d');
         
-        let globalCurrentDirectives = { title: "", text: "", icon: "", type: "" };
-
-        function toggleAudioEngine() {
-            const btn = document.getElementById('audio-toggle-btn');
-            const icon = document.getElementById('audio-icon');
-            const label = document.getElementById('audio-label');
-            if (!isAudioEnabled) {
-                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                isAudioEnabled = true;
-                btn.style.background = "var(--primary-blue)";
-                btn.style.borderColor = "var(--primary-blue)";
-                icon.innerText = "volume_up";
-                label.innerText = "Audio: On";
-            } else {
-                isAudioEnabled = false;
-                btn.style.background = "transparent";
-                btn.style.borderColor = "#475569";
-                icon.innerText = "volume_off";
-                label.innerText = "Audio: Off";
-            }
-        }
-
-        function triggerBrowserSoundNotification(type) {
-            if (!isAudioEnabled || !audioCtx) return;
-            let osc = audioCtx.createOscillator();
-            let gainNode = audioCtx.createGain();
-            osc.connect(gainNode);
-            gainNode.connect(audioCtx.destination);
-            if (type === 'critical') {
-                osc.type = 'sawtooth'; osc.frequency.setValueAtTime(880, audioCtx.currentTime); 
-                gainNode.gain.setValueAtTime(0.2, audioCtx.currentTime); osc.start(); osc.stop(audioCtx.currentTime + 0.15);
-            } else if (type === 'warning') {
-                osc.type = 'sine'; osc.frequency.setValueAtTime(587.33, audioCtx.currentTime);
-                gainNode.gain.setValueAtTime(0.15, audioCtx.currentTime); osc.start(); osc.stop(audioCtx.currentTime + 0.1);
-            }
-        }
-
-        function openMitigationModal() {
-            const modal = document.getElementById('mitigation-modal');
-            const targetContent = document.getElementById('modal-directive-content');
-            let borderStyleColor = "var(--success)";
-            if(globalCurrentDirectives.type === 'critical') borderStyleColor = "var(--danger)";
-            else if(globalCurrentDirectives.type === 'warning') borderStyleColor = "var(--warning)";
-
-            targetContent.innerHTML = `
-                <div class="directive-box dir-${globalCurrentDirectives.type}" style="margin-top:0; border-left-width:6px; padding:20px;">
-                    <span class="material-icons-round text-${globalCurrentDirectives.type}" style="font-size:32px;">${globalCurrentDirectives.icon}</span>
-                    <div>
-                        <div class="directive-title text-${globalCurrentDirectives.type}" style="font-size:1.1rem; text-transform:uppercase;">${globalCurrentDirectives.title}</div>
-                        <div class="directive-desc" style="font-size:0.95rem; margin-top:4px;">${globalCurrentDirectives.text}</div>
-                    </div>
-                </div>`;
-            modal.classList.add('modal-open');
-        }
-
-        function closeMitigationModal() { document.getElementById('mitigation-modal').classList.remove('modal-open'); }
-
-        function switchView(viewId, element) {
-            document.querySelectorAll('.workspace-view').forEach(v => v.classList.remove('active'));
-            document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
-            document.getElementById(viewId).classList.add('active');
-            element.classList.add('active');
-            
-            if(viewId === 'insights-view') { setTimeout(fetchAndRenderHistoricalData, 50); }
-            if(viewId === 'history-view') { setTimeout(fetchAndRenderDeepArchivalTable, 50); }
-        }
-
-        function handleDeviceContextChange(selectedValue) {
-            currentSelectedDevice = selectedValue;
-            updateDashboardEngine();
-            if (document.getElementById('insights-view').classList.contains('active')) fetchAndRenderHistoricalData();
-            if (document.getElementById('history-view').classList.contains('active')) fetchAndRenderDeepArchivalTable();
-        }
-
-        // RESTORED PRECISE AUTOMATED DIRECTIVES FUNCTION EXACTLY AS REQUESTED
-        function computeAutomatedDirectives(temp, hum, noise, gas) {
-            let container = document.getElementById('automation-directive-output');
-            let comfortIdx = document.getElementById('idx-comfort');
-            let gasIdx = document.getElementById('idx-gas');
-            
-            let tErr = (temp > 30.0 || temp < 20.0);
-            let hErr = (hum < 40.0 || hum > 70.0);
-            let nErr = (noise > 500);
-            
-            let count = (tErr ? 1 : 0) + (hErr ? 1 : 0) + (nErr ? 1 : 0);
-            comfortIdx.innerText = `${count} / 3 Anomalies`;
-            
-            let htmlPayload = "";
-
-            if (gas > 500) {
-                gasIdx.innerText = "CRITICAL";
-                gasIdx.className = "text-critical";
-                
-                globalCurrentDirectives = {
-                    title: "EMERGENCY DIRECTIVE: CRITICAL GAS LEAK",
-                    text: `Gas levels are at ${gas}. Immediately evacuate all building personnel from the room. Cut off power supplies and activate structural ventilation systems.`,
-                    icon: "gavel",
-                    type: "critical"
-                };
-
-                htmlPayload += `
-                    <div class="directive-box dir-critical">
-                        <span class="material-icons-round text-critical">gavel</span>
-                        <div>
-                            <div class="directive-title text-critical">${globalCurrentDirectives.title}</div>
-                            <div class="directive-desc">${globalCurrentDirectives.text}</div>
-                        </div>
-                    </div>`;
-                container.innerHTML = htmlPayload;
-                return;
-            } else if (gas > 300) {
-                gasIdx.innerText = "WARNING";
-                gasIdx.className = "text-warning";
-                
-                globalCurrentDirectives = {
-                    title: "SAFETY DIRECTIVE: GAS AMBIENT WARNING",
-                    text: `Elevated combustion metrics detected (${gas}). Inspect local hardware zones for smoke signatures and establish high fresh-air circulation.`,
-                    icon: "warning",
-                    type: "warning"
-                };
-
-                htmlPayload += `
-                    <div class="directive-box dir-warning">
-                        <span class="material-icons-round text-warning">warning</span>
-                        <div>
-                            <div class="directive-title text-warning">${globalCurrentDirectives.title}</div>
-                            <div class="directive-desc">${globalCurrentDirectives.text}</div>
-                        </div>
-                    </div>`;
-            } else {
-                gasIdx.innerText = "Clear";
-                gasIdx.className = "text-normal";
-                
-                globalCurrentDirectives = { title: "ENVIRONMENT PARAMETERS NOMINAL", text: "No corrective guidelines required. All telemetric parameters comply with stable safety margins.", icon: "check_circle", type: "normal" };
-            }
-
-            if (tErr && hErr && nErr) {
-                globalCurrentDirectives = { title: "TEMPERATURE, HUMIDITY & NOISE DISCOMFORT", text: `Complete ambient imbalance (Temp: ${temp}°C, Humidity: ${hum}%, Noise: ${noise}). Balance HVAC components and reduce load from mechanical hardware engines.`, icon: "hdr_enhanced_select", type: "warning" };
-                htmlPayload += `<div class="directive-box dir-warning"><span class="material-icons-round text-warning">hdr_enhanced_select</span><div><div class="directive-title text-warning">${globalCurrentDirectives.title}</div><div class="directive-desc">${globalCurrentDirectives.text}</div></div></div>`;
-            } else if (tErr && hErr) {
-                globalCurrentDirectives = { title: "THERMAL & MOISTURE IMBALANCE", text: `Unbalanced tracking criteria (${temp}°C, ${hum}%). Introduce localized auxiliary heating/cooling or run dedicated building dehumidifiers.`, icon: "device_thermostat", type: "warning" };
-                htmlPayload += `<div class="directive-box dir-warning"><span class="material-icons-round text-warning">device_thermostat</span><div><div class="directive-title text-warning">${globalCurrentDirectives.title}</div><div class="directive-desc">${globalCurrentDirectives.text}</div></div></div>`;
-            } else if (tErr && nErr) {
-                globalCurrentDirectives = { title: "TEMPERATURE & NOISE ANOMALY", text: `Thermal target exceptions noticed alongside elevated acoustic readings (${noise}). Inspect adjacent server racks or machinery grids.`, icon: "hearing", type: "warning" };
-                htmlPayload += `<div class="directive-box dir-warning"><span class="material-icons-round text-warning">hearing</span><div><div class="directive-title text-warning">${globalCurrentDirectives.title}</div><div class="directive-desc">${globalCurrentDirectives.text}</div></div></div>`;
-            } else if (hErr && nErr) {
-                globalCurrentDirectives = { title: "HUMIDITY & NOISE DISCOMFORT", text: `Unstable relative moisture metrics (${hum}%) and noisy ambient feedback. Check for open windows during bad weather conditions.`, icon: "cloud_queue", type: "warning" };
-                htmlPayload += `<div class="directive-box dir-warning"><span class="material-icons-round text-warning">cloud_queue</span><div><div class="directive-title text-warning">${globalCurrentDirectives.title}</div><div class="directive-desc">${globalCurrentDirectives.text}</div></div></div>`;
-            } else if (tErr) {
-                globalCurrentDirectives = { title: "TEMPERATURE DISCOMFORT", text: `Room temperature (${temp}°C) is outside the standard comfort targets. Adjust local thermostat regulators.`, icon: "ac_unit", type: "warning" };
-                htmlPayload += `<div class="directive-box dir-warning"><span class="material-icons-round text-warning">ac_unit</span><div><div class="directive-title text-warning">${globalCurrentDirectives.title}</div><div class="directive-desc">${globalCurrentDirectives.text}</div></div></div>`;
-            } else if (hErr) {
-                globalCurrentDirectives = { title: "MOISTURE INSTABILITY", text: `Relative ambient humidity is tracking at an unstable ${hum}%. Cycle workspace exhaust fans to refresh localized airflow paths.`, icon: "opacity", type: "warning" };
-                htmlPayload += `<div class="directive-box dir-warning"><span class="material-icons-round text-warning">opacity</span><div><div class="directive-title text-warning">${globalCurrentDirectives.title}</div><div class="directive-desc">${globalCurrentDirectives.text}</div></div></div>`;
-            } else if (nErr) {
-                globalCurrentDirectives = { title: "ACOUSTIC NOISE DISCOMFORT", text: `Loud spike detected (${noise}). Deploy physical acoustic dampers or insulate structural door frames.`, icon: "volume_off", type: "warning" };
-                htmlPayload += `<div class="directive-box dir-warning"><span class="material-icons-round text-warning">volume_off</span><div><div class="directive-title text-warning">${globalCurrentDirectives.title}</div><div class="directive-desc">${globalCurrentDirectives.text}</div></div></div>`;
-            }
-
-            if (!tErr && !hErr && !nErr && gas <= 300) {
-                htmlPayload += `
-                    <div class="directive-box dir-normal">
-                        <span class="material-icons-round text-normal">check_circle</span>
-                        <div>
-                            <div class="directive-title text-normal">${globalCurrentDirectives.title}</div>
-                            <div class="directive-desc">${globalCurrentDirectives.text}</div>
-                        </div>
-                    </div>`;
-            }
-
-            container.innerHTML = htmlPayload;
-        }
-
-        async function fetchAndRenderHistoricalData() {
-            try {
-                let url = `${API_URL}/logs`;
-                if(currentSelectedDevice !== "ALL_DEVICES") url += `?device_id=${currentSelectedDevice}`;
-                const res = await fetch(url);
-                let dataSlice = await res.json();
-                if(!dataSlice || dataSlice.length === 0) return;
-                
-                let chronologicalData = [...dataSlice].reverse();
-                if (chronologicalData.length > 20) chronologicalData = chronologicalData.slice(-20);
-                
-                const labels = chronologicalData.map(l => {
-                    const d = new Date(l.created_at);
-                    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-                });
-                
-                const tempDataset = chronologicalData.map(l => l.temperature);
-                const gasDataset = chronologicalData.map(l => l.air_quality);
-                const noiseDataset = chronologicalData.map(l => l.sound_level);
-
-                function renderSingleChart(chartKey, canvasId, label, data, color, yLabel) {
-                    const canvasEl = document.getElementById(canvasId); if (!canvasEl) return;
-                    const ctx = canvasEl.getContext('2d');
-                    if (chartInstances[chartKey]) {
-                        chartInstances[chartKey].data.labels = labels; chartInstances[chartKey].data.datasets[0].data = data; chartInstances[chartKey].update();
-                    } else {
-                        chartInstances[chartKey] = new Chart(ctx, {
-                            type: 'line',
-                            data: { labels: labels, datasets: [{ label: label, data: data, borderColor: color, backgroundColor: `${color}10`, fill: true, tension: 0.2 }] },
-                            options: { responsive: true, maintainAspectRatio: false, scales: { y: { type: 'linear', title: { display: true, text: yLabel } } } }
-                        });
+        if (pieChartInstance) {
+            pieChartInstance.data.datasets[0].data = [normals, discomforts, warnings, criticals];
+            pieChartInstance.update();
+        } else {
+            pieChartInstance = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: ['Normal', 'Discomfort', 'Warning', 'Critical'],
+                    datasets: [{
+                        data: [normals, discomforts, warnings, criticals],
+                        backgroundColor: ['#10b981', '#8b5cf6', '#f59e0b', '#ef4444'],
+                        borderWidth: 2,
+                        borderColor: '#ffffff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { font: { weight: '600', size: 11 } } },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let val = context.raw || 0;
+                                    let pct = total > 0 ? ((val / total) * 100).toFixed(1) : 0;
+                                    return ` ${context.label}: ${val} (${pct}%)`;
+                                }
+                            }
+                        }
                     }
                 }
-                renderSingleChart('temp', 'tempChart', 'Temperature (°C)', tempDataset, '#ef4444', 'Degrees Celsius');
-                renderSingleChart('gas', 'gasChart', 'Gas Level (MQ-2)', gasDataset, '#10b981', 'PPM Ingestion');
-                renderSingleChart('noise', 'noiseChart', 'Sound Level', noiseDataset, '#f59e0b', 'Amplitude Units');
-            } catch (err) { console.error("Line chart rendering error:", err); }
+            });
         }
+    }
 
-        async function fetchAndRenderDeepArchivalTable() {
-            try {
-                let url = `${API_URL}/logs?limit=100`;
-                if(currentSelectedDevice !== "ALL_DEVICES") url += `&device_id=${currentSelectedDevice}`;
+    async function updateDashboardEngine() {
+        try {
+            const [latestRes, statsRes, logsRes, settingsRes] = await Promise.all([
+                fetch(`/api/latest?device_id=${DEVICE_ID}`),
+                fetch(`/api/statistics?device_id=${DEVICE_ID}`),
+                fetch(`/api/logs?device_id=${DEVICE_ID}`),
+                fetch(`/api/settings?device_id=${DEVICE_ID}`)
+            ]);
+
+            if (!latestRes.ok) return;
+            const latest = await latestRes.json();
+            const stats = await statsRes.json();
+            const logs = await logsRes.json();
+            const settings = settingsRes.ok ? await settingsRes.json() : { temp_threshold: 30, humidity_min: 40, humidity_max: 70, noise_threshold: 500, gas_warning: 300, gas_critical: 500 };
+
+            const temp = latest.temperature || 0;
+            const hum = latest.humidity || 0;
+            const noise = latest.sound_level || 0;
+            const gas = latest.air_quality || 0;
+
+            document.getElementById('val-temp').innerText = temp.toFixed(1) + "°C";
+            document.getElementById('val-humid').innerText = hum.toFixed(1) + "%";
+            document.getElementById('val-sound').innerText = noise;
+            document.getElementById('val-gas').innerText = gas;
+
+            updatePieChart(stats);
+
+            // Corrected tracking variables compared against database-driven safe limit parameters
+            const tErr = temp > settings.temp_threshold;
+            const hErr = (hum < settings.humidity_min || hum > settings.humidity_max);
+            const nErr = noise > settings.noise_threshold;
+
+            let finalStatus = "NORMAL";
+            let htmlPayload = "";
+            const container = document.getElementById('directiveContainer');
+
+            if (gas > settings.gas_critical) {
+                finalStatus = "CRITICAL";
+                currentMainDirective = { title: "CRITICAL GAS EMERGENCY", text: `Dangerous leak (${gas} ppm). Clear the room immediately and cut electrical operations.`, icon: "gavel", type: "critical" };
+            } else if (gas > settings.gas_warning) {
+                finalStatus = "WARNING";
+                currentMainDirective = { title: "GAS EXPOSURE WARNING", text: `Elevated measurements (${gas} ppm). Ventilate structural access points now.`, icon: "warning", type: "warning" };
+            } else if (tErr || hErr || nErr) {
+                finalStatus = "DISCOMFORT";
                 
-                const res = await fetch(url);
-                const records = await res.json();
-                const tbody = document.querySelector('#extended-history-table tbody');
-                
-                if(!records || records.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:#94a3b8;">No archival items matches parameters.</td></tr>`;
-                    return;
-                }
-                
-                let htmlStr = "";
-                records.slice(0, 100).forEach(log => {
-                    const ts = new Date(log.created_at).toLocaleString();
-                    let badge = "bg-normal";
-                    if(log.status === "Critical") badge = "bg-critical";
-                    else if(log.status === "Warning") badge = "bg-warning";
-                    
-                    htmlStr += `
-                        <tr>
-                            <td>#${log.id}</td>
-                            <td style="font-family:monospace; font-weight:bold;">${log.device_id || 'N/A'}</td>
-                            <td>${ts}</td>
-                            <td>${log.temperature.toFixed(1)}°C</td>
-                            <td>${log.humidity.toFixed(1)}%</td>
-                            <td>${log.sound_level}</td>
-                            <td>${log.air_quality}</td>
-                            <td><span class="status-badge ${badge}">${log.status}</span></td>
-                        </tr>`;
-                });
-                tbody.innerHTML = htmlStr;
-            } catch(e) { console.error("Deep history table tracking failure:", e); }
-        }
+                let issues = [];
+                let tips = [];
+                if(tErr) { issues.push(`High Heat (${temp.toFixed(1)}°C)`); tips.push("Turn on auxiliary space fans / AC cooling."); }
+                if(hErr) { issues.push(`Humidity Deficit (${hum.toFixed(1)}%)`); tips.push("Check humidity limits. Turn on your HVAC system or workspace fans."); }
+                if(nErr) { issues.push(`Noise Level (${noise})`); tips.push("Close workspace exterior window components."); }
 
-        async function updateDashboardEngine() {
-            try {
-                let url = `${API_URL}/logs`;
-                if(currentSelectedDevice !== "ALL_DEVICES") url += `?device_id=${currentSelectedDevice}`;
-                const res = await fetch(url);
-                const logs = await res.json();
-                
-                if(!logs || logs.length === 0) {
-                    document.querySelector('#logs-table-overview tbody').innerHTML = `<tr><td colspan="7" style="text-align:center; color:#94a3b8;">No records found.</td></tr>`;
-                    return;
-                }
+                currentMainDirective = { 
+                    title: "ENVIRONMENTAL DISCOMFORT", 
+                    text: `Breached variables: ${issues.join(', ')}. Action advice: ${tips.join(' ')}`, 
+                    icon: "sentiment_dissatisfied", 
+                    type: "discomfort" 
+                };
+            } else {
+                finalStatus = "NORMAL";
+                currentMainDirective = { title: "ALL CONDITIONS EXCELLENT", text: "Healthy workplace levels observed across sensors.", icon: "check_circle", type: "normal" };
+            }
 
-                const current = logs[0];
-                
-                document.getElementById('device-id-badge').innerText = `Device: ${current.device_id || 'GLOBAL'}`;
-                
-                const tempEl = document.getElementById('card-temp');
-                const humEl = document.getElementById('card-hum');
-                const noiseEl = document.getElementById('card-noise');
-                const gasEl = document.getElementById('card-gas');
+            const roomBox = document.getElementById('room-status-box');
+            const statusBanner = document.getElementById('system-status');
+            const statusIcon = document.getElementById('room-status-icon');
+            
+            statusBanner.innerText = finalStatus;
+            statusIcon.innerText = currentMainDirective.icon;
 
-                tempEl.innerText = `${current.temperature.toFixed(1)} °C`;
-                humEl.innerText = `${current.humidity.toFixed(1)} %`;
-                noiseEl.innerText = current.sound_level;
-                gasEl.innerText = current.air_quality;
+            if (finalStatus === "CRITICAL") {
+                roomBox.style.background = "#fee2e2"; statusBanner.style.color = "var(--danger)"; statusIcon.style.color = "var(--danger)";
+                htmlPayload += `<div class="directive-box dir-critical" onclick="showPopup('${currentMainDirective.title}','${currentMainDirective.text}','${currentMainDirective.icon}','critical')"><span class="material-icons-round text-critical">${currentMainDirective.icon}</span><div><div class="directive-title text-critical">${currentMainDirective.title}</div><div class="directive-desc">${currentMainDirective.text}</div></div></div>`;
+            } else if (finalStatus === "WARNING") {
+                roomBox.style.background = "#fef3c7"; statusBanner.style.color = "var(--warning)"; statusIcon.style.color = "var(--warning)";
+                htmlPayload += `<div class="directive-box dir-warning" onclick="showPopup('${currentMainDirective.title}','${currentMainDirective.text}','${currentMainDirective.icon}','warning')"><span class="material-icons-round text-warning">${currentMainDirective.icon}</span><div><div class="directive-title text-warning">${currentMainDirective.title}</div><div class="directive-desc">${currentMainDirective.text}</div></div></div>`;
+            } else if (finalStatus === "DISCOMFORT") {
+                roomBox.style.background = "#f3e8ff"; statusBanner.style.color = "var(--discomfort)"; statusIcon.style.color = "var(--discomfort)";
+                htmlPayload += `<div class="directive-box dir-discomfort" onclick="showPopup('${currentMainDirective.title}','${currentMainDirective.text}','${currentMainDirective.icon}','discomfort')"><span class="material-icons-round text-discomfort">${currentMainDirective.icon}</span><div><div class="directive-title text-discomfort">${currentMainDirective.title}</div><div class="directive-desc">${currentMainDirective.text}</div></div></div>`;
+            } else {
+                roomBox.style.background = "#d1fae5"; statusBanner.style.color = "var(--success)"; statusIcon.style.color = "var(--success)";
+                htmlPayload += `<div class="directive-box dir-normal" onclick="showPopup('${currentMainDirective.title}','${currentMainDirective.text}','${currentMainDirective.icon}','normal')"><span class="material-icons-round text-normal">${currentMainDirective.icon}</span><div><div class="directive-title text-normal">${currentMainDirective.title}</div><div class="directive-desc">${currentMainDirective.text}</div></div></div>`;
+            }
+            container.innerHTML = htmlPayload;
 
-                if (current.temperature > 30.0 || current.temperature < 20.0) tempEl.className = "metric-value text-warning"; else tempEl.className = "metric-value text-normal";
-                if (current.humidity > 70.0 || current.humidity < 40.0) humEl.className = "metric-value text-warning"; else humEl.className = "metric-value text-normal";
-                if (current.sound_level > 500) noiseEl.className = "metric-value text-warning"; else noiseEl.className = "metric-value text-normal";
+            const tbody = document.querySelector('#logs-table-overview tbody');
+            if (logs && logs.length > 0) {
+                tbody.innerHTML = logs.slice(0, 4).map(l => `
+                    <tr>
+                        <td>${new Date(l.created_at).toLocaleTimeString()}</td>
+                        <td style="font-family:monospace; font-weight:bold;">${l.device_id}</td>
+                        <td>${l.temperature.toFixed(1)}°C</td>
+                        <td>${l.humidity.toFixed(1)}%</td>
+                        <td>${l.sound_level}</td>
+                        <td>${l.air_quality}</td>
+                        <td><span class="status-badge ${l.status==='Critical'?'bg-critical':l.status==='Warning'?'bg-warning':l.status==='Discomfort'?'bg-discomfort':'bg-normal'}">${l.status}</span></td>
+                    </tr>
+                `).join('');
+            }
+        } catch (err) { console.error(err); }
+    }
 
-                if (current.air_quality > 500) gasEl.className = "metric-value text-critical";
-                else if (current.air_quality > 300) gasEl.className = "metric-value text-warning";
-                else gasEl.className = "metric-value text-normal";
-
-                computeAutomatedDirectives(current.temperature, current.humidity, current.sound_level, current.air_quality);
-
-                const tickerOutput = document.getElementById('ticker-output');
-                tickerOutput.innerText = `[LOG MATCH] -> Node: ${current.device_id} | Temp ${current.temperature.toFixed(1)}°C | Humidity ${current.humidity.toFixed(1)}% | Gas ${current.air_quality}. Status: ${current.status.toUpperCase()}.`;  
-
-                const statusBlock = document.getElementById('global-status-card');
-                const masterCard = document.getElementById('master-status-card');
-                const roomBox = document.getElementById('room-twin-model');
-
-                statusBlock.innerText = `${current.status} State`;
-                if (current.status === 'Critical') {
-                    statusBlock.className = "status-block bg-critical"; masterCard.style.borderTopColor = "var(--danger)";
-                    document.documentElement.style.setProperty('--room-glow', 'rgba(239,68,68,0.6)'); roomBox.style.background = "var(--danger)";
-                    triggerBrowserSoundNotification('critical');
-                } else if (current.status === 'Warning') {
-                    statusBlock.className = "status-block bg-warning"; masterCard.style.borderTopColor = "var(--warning)";
-                    document.documentElement.style.setProperty('--room-glow', 'rgba(245,158,11,0.4)'); roomBox.style.background = "var(--warning)";
-                    triggerBrowserSoundNotification('warning');
-                } else {
-                    statusBlock.className = "status-block bg-normal"; masterCard.style.borderTopColor = "var(--success)";
-                    document.documentElement.style.setProperty('--room-glow', 'rgba(16,185,129,0.3)'); roomBox.style.background = "#cbd5e1";
-                }
-
-                const tbody = document.querySelector('#logs-table-overview tbody');
-                let tableHtml = "";
-                const visualLogsList = logs.slice(0, 5);
-                visualLogsList.forEach(log => {
-                    const logTime = new Date(log.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                    let badgClass = "bg-normal";
-                    if(log.status === "Critical") badgClass = "bg-critical";
-                    else if(log.status === "Warning") badgClass = "bg-warning";
-
-                    tableHtml += `
-                        <tr>
-                            <td>${logTime}</td>
-                            <td style="font-family:monospace; font-weight:bold;">${log.device_id || 'Node_01'}</td>
-                            <td>${log.temperature.toFixed(1)}°C</td>
-                            <td>${log.humidity.toFixed(1)}%</td>
-                            <td>${log.sound_level}</td>
-                            <td>${log.air_quality}</td>
-                            <td><span class="status-badge ${badgClass}">${log.status}</span></td>
-                        </tr>`;
-                });
-                tbody.innerHTML = tableHtml;
-
-                if (document.getElementById('insights-view').classList.contains('active')) fetchAndRenderHistoricalData();
-                if (document.getElementById('history-view').classList.contains('active')) fetchAndRenderDeepArchivalTable();
-            } catch (err) { console.error("Live loop sync exception caught:", err); }
-        }
-
-        document.getElementById('settings-form').addEventListener('submit', function(e) {
-            e.preventDefault(); alert("System threshold bounds successfully updated in volatile registers!");
-        });
-
+    window.addEventListener('DOMContentLoaded', () => {
         updateDashboardEngine();
-        setInterval(updateDashboardEngine, 5000); 
-    </script>
+        setInterval(updateDashboardEngine, 4000);
+    });
+</script>
 </body>
 </html>

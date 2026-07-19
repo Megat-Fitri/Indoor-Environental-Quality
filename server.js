@@ -1,19 +1,30 @@
 const express = require('express');
+const path = require('path');
 const sqlite3 = require('sqlite3').verbose();
 const cors = require('cors');
 
 const app = express();
 app.use(cors());
 app.use(express.json());
+app.use(express.static(path.join(__dirname, 'dashboard')));
 
-// Connect to your local SQLite database engine
-const db = new sqlite3.Database('./database.db', (err) => {
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'dashboard', 'index.html'));
+});
+
+const DB_PATH = './database.db';
+const DEFAULT_DEVICE_ID = 'ESP32_ROOM_1';
+
+const db = new sqlite3.Database(DB_PATH, (err) => {
     if (err) {
-        console.error("Database connection fault:", err.message);
-    } else {
-        console.log("Connected to the SQLite database pipeline.");
-        
-        // Ensure the logs table structurally exists
+        console.error('Database connection fault:', err.message);
+        return;
+    }
+    initializeDatabase();
+});
+
+function initializeDatabase() {
+    db.serialize(() => {
         db.run(`CREATE TABLE IF NOT EXISTS logs (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             device_id TEXT,
@@ -24,83 +35,98 @@ const db = new sqlite3.Database('./database.db', (err) => {
             status TEXT,
             created_at TEXT
         )`);
-    }
-});
 
-// POST: Endpoint where your ESP32 pushes live telemetry data
-app.post('/api/sensor-data', (expressReq, expressRes) => {
-    const { device_id, temperature, humidity, sound_level, air_quality } = expressReq.body;
+        db.run(`CREATE TABLE IF NOT EXISTS device_settings (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            device_id TEXT UNIQUE,
+            temp_threshold REAL DEFAULT 30,
+            humidity_min REAL DEFAULT 40,
+            humidity_max REAL DEFAULT 70,
+            noise_threshold INTEGER DEFAULT 500,
+            gas_warning INTEGER DEFAULT 300,
+            gas_critical INTEGER DEFAULT 500,
+            upload_interval INTEGER DEFAULT 10,
+            alert_mode TEXT DEFAULT 'AUTO'
+        )`, () => {
+            db.run(`INSERT OR IGNORE INTO device_settings (device_id) VALUES ('${DEFAULT_DEVICE_ID}')`);
+        });
+    });
+}
 
-    // Calculate the Status matching your progressive buzzer rules
-    let calculatedStatus = "Normal";
-    
-    if (air_quality > 500) {
-        calculatedStatus = "Critical";
-    } else if (air_quality > 300) {
-        calculatedStatus = "Warning";
-    } else if (temperature > 30.0 || temperature < 20.0 || humidity < 40.0 || humidity > 70.0 || sound_level > 500) {
-        calculatedStatus = "Warning";
-    }
-
-    // Capture standard ISO timestamp ending in 'Z' (UTC format)
+// 1. POST: Sensor Telemetry Intake
+app.post('/api/sensor-data', (req, res) => {
+    const { device_id, temperature, humidity, sound_level, air_quality } = req.body;
+    const targetId = device_id || DEFAULT_DEVICE_ID;
     const timestamp = new Date().toISOString();
 
-    const logSql = `INSERT INTO logs (device_id, temperature, humidity, sound_level, air_quality, status, created_at) 
-                    VALUES (?, ?, ?, ?, ?, ?, ?)`;
-    const logParams = [device_id, temperature, humidity, sound_level, air_quality, calculatedStatus, timestamp];
-
-    db.run(logSql, logParams, function (err) {
-        if (err) {
-            console.error("Failed to insert telemetry register:", err.message);
-            return expressRes.status(500).json({ error: err.message });
+    db.get('SELECT * FROM device_settings WHERE device_id = ?', [targetId], (err, settings) => {
+        let active = settings || { temp_threshold: 30, noise_threshold: 500, gas_warning: 300, gas_critical: 500 };
+        
+        let status = 'Normal';
+        if (Number(air_quality) > Number(active.gas_critical)) status = 'Critical';
+        else if (Number(air_quality) > Number(active.gas_warning) || Number(temperature) > Number(active.temp_threshold) || Number(sound_level) > Number(active.noise_threshold)) {
+            status = 'Warning';
         }
 
-        // Default setting fallbacks for incoming edge responses
-        const systemSettings = {
-            temp_threshold: 32.0,
-            gas_threshold: 400,
-            upload_interval: 10
-        };
+        db.run(`INSERT INTO logs (device_id, temperature, humidity, sound_level, air_quality, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+            [targetId, temperature, humidity, sound_level, air_quality, status, timestamp], function(e) {
+                if (e) return res.status(500).json({ error: e.message });
+                res.json({ message: 'Success', evaluated_status: status });
+            });
+    });
+});
 
-        expressRes.status(201).json({
-            message: "Telemetry packet processed.",
-            log_id: this.lastID,
-            status: calculatedStatus,
-            settings: {
-                temp_threshold: systemSettings.temp_threshold,
-                gas_threshold: systemSettings.gas_threshold,
-                upload_interval: systemSettings.upload_interval
-            }
+// 2. GET: Settings Endpoint (FIXED: Supports both dashboard and C++ key naming conventions)
+app.get('/api/settings', (req, res) => {
+    const device_id = req.query.device_id || DEFAULT_DEVICE_ID;
+    db.get('SELECT * FROM device_settings WHERE device_id = ?', [device_id], (err, row) => {
+        if (err) return res.status(500).json({ error: err.message });
+        if (!row) return res.json({});
+
+        res.json({
+            device_id: row.device_id,
+            temp_threshold: Number(row.temp_threshold),
+            humidity_min: Number(row.humidity_min),
+            humidity_max: Number(row.humidity_max),
+            noise_threshold: Number(row.noise_threshold),
+            upload_interval: Number(row.upload_interval),
+            alert_mode: row.alert_mode,
+            // Cross-mapping properties to keep database schema and C++ variables perfectly aligned
+            gas_warning: Number(row.gas_warning),
+            gas_critical: Number(row.gas_critical),
+            gas_warning_threshold: Number(row.gas_warning), 
+            gas_critical_threshold: Number(row.gas_critical)
         });
     });
 });
 
-// GET: Enhanced historical logs endpoint with dynamic time-range query filtering
-app.get('/api/logs', (expressReq, expressRes) => {
-    const range = expressReq.query.range; 
-    let timeFilterSql = "";
+// 3. POST: Save Settings
+app.post('/api/settings', (req, res) => {
+    const { device_id, temp_threshold, humidity_min, humidity_max, noise_threshold, gas_warning, gas_critical, upload_interval, alert_mode } = req.body;
+    const targetId = device_id || DEFAULT_DEVICE_ID;
 
-    // Uses strftime to compare standard UTC ISO-8601 strings cleanly
-    if (range === '1h') {
-        timeFilterSql = "WHERE created_at >= strftime('%Y-%m-%dT%H:%M:%fZ', 'now', '-1 hour')";
-    } else if (range === '24h') {
-        timeFilterSql = "WHERE created_at >= strftime('%Y-%m-%dT%H:%M:%fZ', 'now', '-24 hours')";
-    } else if (range === '7d') {
-        timeFilterSql = "WHERE created_at >= strftime('%Y-%m-%dT%H:%M:%fZ', 'now', '-7 days')";
-    }
-
-    // Default pulls overall telemetry logs chronological stream so UI is never blank
-    const sql = `SELECT * FROM logs ${timeFilterSql} ORDER BY created_at DESC LIMIT 100`;
+    const query = `UPDATE device_settings SET 
+        temp_threshold = ?, humidity_min = ?, humidity_max = ?, noise_threshold = ?, 
+        gas_warning = ?, gas_critical = ?, upload_interval = ?, alert_mode = ? WHERE device_id = ?`;
     
-    db.all(sql, [], (err, rows) => {
-        if (err) {
-            return expressRes.status(500).json({ error: err.message });
-        }
-        expressRes.json(rows); 
+    db.run(query, [temp_threshold, humidity_min, humidity_max, noise_threshold, gas_warning, gas_critical, upload_interval, alert_mode, targetId], (err) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ status: 'Configuration Updated Successfully' });
     });
 });
 
-const PORT = 3000;
-app.listen(PORT, () => {
-    console.log(`Server handling background streams running on port ${PORT}`);
+app.get('/api/logs', (req, res) => {
+    db.all('SELECT * FROM logs ORDER BY id DESC LIMIT 100', [], (err, rows) => { res.json(rows || []); });
 });
+
+app.get('/api/latest', (req, res) => {
+    db.get('SELECT * FROM logs ORDER BY id DESC LIMIT 1', [], (err, row) => { res.json(row || {}); });
+});
+
+app.get('/api/statistics', (req, res) => {
+    db.get(`SELECT COUNT(*) AS total_logs, AVG(temperature) AS avg_temp, AVG(humidity) AS avg_humidity, AVG(sound_level) AS sound_level, MAX(sound_level) AS peak_noise, MAX(air_quality) AS air_quality FROM logs`, [], (err, row) => {
+        res.json(row || {});
+    });
+});
+
+app.listen(3000, () => console.log(`Backend Server Engine listening on port 3000`));
